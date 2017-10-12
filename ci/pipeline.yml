@@ -1,0 +1,61 @@
+jobs:
+- name: new-ca
+  plan:
+  - aggregate:
+    - get: pipeline-tasks
+    - get: secret-rotation-config
+    - get: bosh-config
+    - get: secrets-in
+  - task: new-ca
+    file: secret-rotation-config/ci/new-ca.yml
+    params:
+      PASSPHRASE: {{tooling-secrets-passphrase}}
+  - put: secrets-out
+    params:
+      file: secrets-updated/secrets.yml
+
+resources:
+- name: secret-rotation-config
+  type: git
+
+- name: bosh-config
+  type: git
+
+- name: pipeline-tasks
+  type: git
+  source:
+    uri: https://github.com/18F/cg-pipeline-tasks
+    branch: master
+
+- name: terraform-outputs
+  type: s3-iam
+  source:
+    bucket: {{tf-state-bucket-tooling}}
+    versioned_file: {{tf-state-file-tooling}}
+    region_name: aws-us-gov
+
+- name: secrets-in
+  type: cg-common
+  source:
+    bucket_name: {{tooling-bucket-name}}
+    region: {{aws-region}}
+    secrets_file: secrets.yml
+    secrets_passphrase: {{tooling-secrets-passphrase}}
+
+- name: secrets-out
+  type: s3-iam
+  source:
+    bucket_name: {{tooling-bucket-name}}
+    region: {{aws-region}}
+    versioned_file: secrets.yml
+
+resource_types:
+- name: cg-common
+  type: docker-image
+  source:
+    repository: 18fgsa/cg-common-resource
+
+- name: s3-iam
+  type: docker-image
+  source:
+    repository: 18fgsa/s3-resource
