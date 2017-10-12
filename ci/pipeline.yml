@@ -3,23 +3,33 @@ jobs:
   plan:
   - aggregate:
     - get: pipeline-tasks
+    - get: terraform-outputs
     - get: secret-rotation-config
     - get: bosh-config
     - get: secrets-in
   - task: new-ca
     file: secret-rotation-config/ci/new-ca.yml
+    tags: [iaas]
     params:
+      AWS_DEFAULT_REGION: {{aws-region}}
       PASSPHRASE: {{tooling-secrets-passphrase}}
   - put: secrets-out
+    tags: [iaas]
     params:
-      file: secrets-updated/secrets.yml
+      file: secrets-updated/secrets-encrypted.yml
 
 resources:
 - name: secret-rotation-config
   type: git
+  source:
+    uri: https://github.com/18F/cg-secret-rotation
+    branch: {{secret-rotation-git-branch}}
 
 - name: bosh-config
   type: git
+  source:
+    uri: https://github.com/18F/cg-deploy-bosh
+    branch: master
 
 - name: pipeline-tasks
   type: git
@@ -32,22 +42,23 @@ resources:
   source:
     bucket: {{tf-state-bucket-tooling}}
     versioned_file: {{tf-state-file-tooling}}
-    region_name: aws-us-gov
+    region_name: {{aws-region}}
 
 - name: secrets-in
   type: cg-common
   source:
     bucket_name: {{tooling-bucket-name}}
     region: {{aws-region}}
-    secrets_file: secrets.yml
+    secrets_file: {{tooling-secrets-file}}
     secrets_passphrase: {{tooling-secrets-passphrase}}
 
 - name: secrets-out
   type: s3-iam
   source:
-    bucket_name: {{tooling-bucket-name}}
-    region: {{aws-region}}
-    versioned_file: secrets.yml
+    bucket: {{tooling-bucket-name}}
+    region_name: {{aws-region}}
+    versioned_file: {{tooling-secrets-file}}
+    server_side_encryption: AES256
 
 resource_types:
 - name: cg-common
