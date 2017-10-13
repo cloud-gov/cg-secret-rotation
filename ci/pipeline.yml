@@ -1,19 +1,154 @@
+---
+groups:
+  - name: all
+    jobs:
+    - new-ca
+    - update-certificates-bosh-tooling
+    - update-certificates-bosh-development
+    - update-certificates-bosh-staging
+    - update-certificates-bosh-production
+    - remove-ca
+  - name: master
+    jobs:
+    - new-ca
+    - remove-ca
+  - name: tooling
+    jobs:
+    - update-certificates-bosh-tooling
+  - name: development
+    jobs:
+    - update-certificates-bosh-development
+  - name: staging
+    jobs:
+    - update-certificates-bosh-staging
+  - name: production
+    jobs:
+    - update-certificates-bosh-production
 jobs:
 - name: new-ca
   plan:
   - aggregate:
     - get: pipeline-tasks
     - get: terraform-outputs
+      resource: terraform-outputs-tooling
     - get: secret-rotation-config
     - get: bosh-config
     - get: secrets-in
+      resource: secrets-in-common
   - task: new-ca
     file: secret-rotation-config/ci/new-ca.yml
     tags: [iaas]
     params:
       AWS_DEFAULT_REGION: {{aws-region}}
+      PASSPHRASE: {{common-secrets-passphrase}}
+  - put: secrets-out-common
+    tags: [iaas]
+    params:
+      file: secrets-updated/secrets-encrypted.yml
+
+- name: update-certificates-bosh-tooling
+  plan:
+  - aggregate:
+    - get: pipeline-tasks
+    - get: terraform-outputs
+      resource: terraform-outputs-tooling
+    - get: secret-rotation-config
+    - get: bosh-config
+    - get: secrets-in-common
+    - get: secrets-in
+      resource: secrets-in-tooling
+  - task: update-certificates
+    file: secret-rotation-config/ci/update-certificates.yml
+    tags: [iaas]
+    params:
+      AWS_DEFAULT_REGION: {{aws-region}}
       PASSPHRASE: {{tooling-secrets-passphrase}}
-  - put: secrets-out
+  - put: secrets-out-tooling
+    tags: [iaas]
+    params:
+      file: secrets-updated/secrets-encrypted.yml
+
+- name: update-certificates-bosh-development
+  plan:
+  - aggregate:
+    - get: pipeline-tasks
+    - get: terraform-outputs
+      resource: terraform-outputs-development
+    - get: secret-rotation-config
+    - get: bosh-config
+    - get: secrets-in-common
+    - get: secrets-in
+      resource: secrets-in-development
+  - task: update-certificates
+    file: secret-rotation-config/ci/update-certificates.yml
+    tags: [iaas]
+    params:
+      AWS_DEFAULT_REGION: {{aws-region}}
+      PASSPHRASE: {{development-secrets-passphrase}}
+  - put: secrets-out-development
+    tags: [iaas]
+    params:
+      file: secrets-updated/secrets-encrypted.yml
+
+- name: update-certificates-bosh-staging
+  plan:
+  - aggregate:
+    - get: pipeline-tasks
+    - get: terraform-outputs
+      resource: terraform-outputs-staging
+    - get: secret-rotation-config
+    - get: bosh-config
+    - get: secrets-in-common
+    - get: secrets-in
+      resource: secrets-in-staging
+  - task: update-certificates
+    file: secret-rotation-config/ci/update-certificates.yml
+    tags: [iaas]
+    params:
+      AWS_DEFAULT_REGION: {{aws-region}}
+      PASSPHRASE: {{staging-secrets-passphrase}}
+  - put: secrets-out-staging
+    tags: [iaas]
+    params:
+      file: secrets-updated/secrets-encrypted.yml
+
+- name: update-certificates-bosh-production
+  plan:
+  - aggregate:
+    - get: pipeline-tasks
+    - get: terraform-outputs
+      resource: terraform-outputs-production
+    - get: secret-rotation-config
+    - get: bosh-config
+    - get: secrets-in-common
+    - get: secrets-in
+      resource: secrets-in-production
+  - task: update-certificates
+    file: secret-rotation-config/ci/update-certificates.yml
+    tags: [iaas]
+    params:
+      AWS_DEFAULT_REGION: {{aws-region}}
+      PASSPHRASE: {{production-secrets-passphrase}}
+  - put: secrets-out-production
+    tags: [iaas]
+    params:
+      file: secrets-updated/secrets-encrypted.yml
+
+- name: remove-ca
+  plan:
+  - aggregate:
+    - get: pipeline-tasks
+    - get: secret-rotation-config
+    - get: bosh-config
+    - get: secrets-in
+      resource: secrets-in-common
+  - task: remove-ca
+    file: secret-rotation-config/ci/remove-ca.yml
+    tags: [iaas]
+    params:
+      AWS_DEFAULT_REGION: {{aws-region}}
+      PASSPHRASE: {{common-secrets-passphrase}}
+  - put: secrets-out-common
     tags: [iaas]
     params:
       file: secrets-updated/secrets-encrypted.yml
@@ -37,14 +172,43 @@ resources:
     uri: https://github.com/18F/cg-pipeline-tasks
     branch: master
 
-- name: terraform-outputs
+- name: terraform-outputs-tooling
   type: s3-iam
   source:
-    bucket: {{tf-state-bucket-tooling}}
+    bucket: {{tf-state-bucket}}
     versioned_file: {{tf-state-file-tooling}}
     region_name: {{aws-region}}
 
-- name: secrets-in
+- name: terraform-outputs-development
+  type: s3-iam
+  source:
+    bucket: {{tf-state-bucket}}
+    versioned_file: {{tf-state-file-development}}
+    region_name: {{aws-region}}
+
+- name: terraform-outputs-staging
+  type: s3-iam
+  source:
+    bucket: {{tf-state-bucket}}
+    versioned_file: {{tf-state-file-staging}}
+    region_name: {{aws-region}}
+
+- name: terraform-outputs-production
+  type: s3-iam
+  source:
+    bucket: {{tf-state-bucket}}
+    versioned_file: {{tf-state-file-production}}
+    region_name: {{aws-region}}
+
+- name: secrets-in-common
+  type: cg-common
+  source:
+    bucket_name: {{common-bucket-name}}
+    region: {{aws-region}}
+    secrets_file: {{common-secrets-file}}
+    secrets_passphrase: {{common-secrets-passphrase}}
+
+- name: secrets-in-tooling
   type: cg-common
   source:
     bucket_name: {{tooling-bucket-name}}
@@ -52,12 +216,68 @@ resources:
     secrets_file: {{tooling-secrets-file}}
     secrets_passphrase: {{tooling-secrets-passphrase}}
 
-- name: secrets-out
+- name: secrets-in-development
+  type: cg-common
+  source:
+    bucket_name: {{development-bucket-name}}
+    region: {{aws-region}}
+    secrets_file: {{development-secrets-file}}
+    secrets_passphrase: {{development-secrets-passphrase}}
+
+- name: secrets-in-staging
+  type: cg-common
+  source:
+    bucket_name: {{staging-bucket-name}}
+    region: {{aws-region}}
+    secrets_file: {{staging-secrets-file}}
+    secrets_passphrase: {{staging-secrets-passphrase}}
+
+- name: secrets-in-production
+  type: cg-common
+  source:
+    bucket_name: {{production-bucket-name}}
+    region: {{aws-region}}
+    secrets_file: {{production-secrets-file}}
+    secrets_passphrase: {{production-secrets-passphrase}}
+
+- name: secrets-out-common
+  type: s3-iam
+  source:
+    bucket: {{common-bucket-name}}
+    region_name: {{aws-region}}
+    versioned_file: {{common-secrets-file}}
+    server_side_encryption: AES256
+
+- name: secrets-out-tooling
   type: s3-iam
   source:
     bucket: {{tooling-bucket-name}}
     region_name: {{aws-region}}
     versioned_file: {{tooling-secrets-file}}
+    server_side_encryption: AES256
+
+- name: secrets-out-development
+  type: s3-iam
+  source:
+    bucket: {{development-bucket-name}}
+    region_name: {{aws-region}}
+    versioned_file: {{development-secrets-file}}
+    server_side_encryption: AES256
+
+- name: secrets-out-staging
+  type: s3-iam
+  source:
+    bucket: {{staging-bucket-name}}
+    region_name: {{aws-region}}
+    versioned_file: {{staging-secrets-file}}
+    server_side_encryption: AES256
+
+- name: secrets-out-production
+  type: s3-iam
+  source:
+    bucket: {{production-bucket-name}}
+    region_name: {{aws-region}}
+    versioned_file: {{production-secrets-file}}
     server_side_encryption: AES256
 
 resource_types:
