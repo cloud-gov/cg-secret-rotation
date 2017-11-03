@@ -65,6 +65,7 @@ jobs:
     params:
       AWS_DEFAULT_REGION: {{aws-region}}
       PASSPHRASE: {{tooling-secrets-passphrase}}
+      ENVIRONMENT: tooling
   - put: secrets-out-tooling
     tags: [iaas]
     params:
@@ -88,6 +89,7 @@ jobs:
     params:
       AWS_DEFAULT_REGION: {{aws-region}}
       PASSPHRASE: {{development-secrets-passphrase}}
+      ENVIRONMENT: development
   - put: secrets-out-development
     tags: [iaas]
     params:
@@ -110,6 +112,7 @@ jobs:
     params:
       AWS_DEFAULT_REGION: {{aws-region}}
       PASSPHRASE: {{staging-secrets-passphrase}}
+      ENVIRONMENT: staging
   - put: secrets-out-staging
     tags: [iaas]
     params:
@@ -132,6 +135,7 @@ jobs:
     params:
       AWS_DEFAULT_REGION: {{aws-region}}
       PASSPHRASE: {{production-secrets-passphrase}}
+      ENVIRONMENT: production
   - put: secrets-out-production
     tags: [iaas]
     params:
@@ -323,7 +327,7 @@ resources:
 - name: pipelines
   type: concourse-pipeline
   source:
-    target: https://ci.fr.cloud.gov
+    target: {{concourse-url}}
     teams:
     - name: {{concourse-team}}
       username: {{concourse-username}}
