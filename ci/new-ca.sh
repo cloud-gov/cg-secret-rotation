@@ -39,6 +39,18 @@ spruce json secrets-updated/secrets.yml \
   > secrets-updated/tmp.yml
 mv secrets-updated/tmp.yml secrets-updated/secrets.yml
 
+# generate new secrets passphrase each time we update secrets
+## all pipelines consuming these secrets (including this one) will need to be updated before running again.
+## use PASSPHRASE from env/pipeline configs for now.
+#PASSPHRASE=$(cat /dev/urandom | LC_ALL=C tr -dc "a-zA-Z0-9" | head -c 32)
+
+# store environment secrets passphrase in the secrets
+spruce json secrets-updated/secrets.yml \
+| jq --arg password "${PASSPHRASE}" ".common_secrets_secrets_passphrase = \$password" \
+  | spruce merge \
+  > secrets-updated/tmp.yml
+mv secrets-updated/tmp.yml secrets-updated/secrets.yml
+
 # Encrypt updated secrets
 INPUT_FILE=secrets-updated/secrets.yml \
   OUTPUT_FILE=secrets-updated/secrets-encrypted.yml \
