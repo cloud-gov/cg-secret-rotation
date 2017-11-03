@@ -7,10 +7,12 @@ groups:
     - update-certificates-bosh-development
     - update-certificates-bosh-staging
     - update-certificates-bosh-production
+    - update-pipeline-bosh
     - remove-ca
   - name: master
     jobs:
     - new-ca
+    - update-pipeline-bosh
     - remove-ca
   - name: tooling
     jobs:
@@ -75,6 +77,7 @@ jobs:
     - get: terraform-outputs
       resource: terraform-outputs-development
     - get: secret-rotation-config
+      resource: secret-rotation-config-development
     - get: bosh-config
     - get: secrets-in-common
     - get: secrets-in
@@ -153,6 +156,30 @@ jobs:
     params:
       file: secrets-updated/secrets-encrypted.yml
 
+- name: update-pipeline-bosh
+  plan:
+  - aggregate:
+    - get: secrets-in-common
+    - get: secrets-in-tooling
+    - get: secrets-in-development
+    - get: secrets-in-staging
+    - get: secrets-in-production
+    - get: concourse-vars-bosh
+    - get: bosh-config
+  - put: pipelines
+    params:
+      pipelines:
+      - name: {{pipeline-bosh}}
+        team: {{concourse-team}}
+        config_file: bosh-config/pipeline.yml
+        vars_files:
+        - concourse-vars-bosh/cg-deploy-bosh.yml
+        - secrets-in-common/secrets.yml
+        - secrets-in-tooling/secrets.yml
+        - secrets-in-development/secrets.yml
+        - secrets-in-staging/secrets.yml
+        - secrets-in-production/secrets.yml
+
 resources:
 - name: secret-rotation-config
   type: git
@@ -160,11 +187,17 @@ resources:
     uri: https://github.com/18F/cg-secret-rotation
     branch: {{secret-rotation-git-branch}}
 
+- name: secret-rotation-config-development
+  type: git
+  source:
+    uri: https://github.com/18F/cg-secret-rotation
+    branch: {{secret-rotation-git-branch-development}}
+
 - name: bosh-config
   type: git
   source:
     uri: https://github.com/18F/cg-deploy-bosh
-    branch: master
+    branch: {{bosh-git-branch}}
 
 - name: pipeline-tasks
   type: git
@@ -280,6 +313,22 @@ resources:
     versioned_file: {{production-secrets-file}}
     server_side_encryption: AES256
 
+- name: concourse-vars-bosh
+  type: s3-iam
+  source:
+    bucket: {{concourse-vars-bucket}}
+    versioned_file: {{concourse-vars-file-bosh}}
+    region_name: {{aws-region}}
+
+- name: pipelines
+  type: concourse-pipeline
+  source:
+    target: https://ci.fr.cloud.gov
+    teams:
+    - name: {{concourse-team}}
+      username: {{concourse-username}}
+      password: {{concourse-password}}
+
 resource_types:
 - name: cg-common
   type: docker-image
@@ -290,3 +339,8 @@ resource_types:
   type: docker-image
   source:
     repository: 18fgsa/s3-resource
+
+- name: concourse-pipeline
+  type: docker-image
+  source:
+    repository: concourse/concourse-pipeline-resource
