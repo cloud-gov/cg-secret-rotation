@@ -37,6 +37,12 @@ mapping=$(cat << EOF
 [
   {"key": "bosh_director_key", "path":"out/${bosh_name}-bosh-director.key"},
   {"key": "bosh_director_cert", "path":"out/${bosh_name}-bosh-director.crt"},
+  {"key": "bosh_nats_director_key", "path":"out/${bosh_name}.director.bosh-internal.key"},
+  {"key": "bosh_nats_director_cert", "path":"out/${bosh_name}.director.bosh-internal.crt"},
+  {"key": "bosh_nats_server_key", "path":"out/${bosh_name}.nats.bosh-internal.key"},
+  {"key": "bosh_nats_server_cert", "path":"out/${bosh_name}.nats.bosh-internal.crt"},
+  {"key": "bosh_nats_hm_key", "path":"out/${bosh_name}.hm.bosh-internal.key"},
+  {"key": "bosh_nats_hm_cert", "path":"out/${bosh_name}.hm.bosh-internal.crt"},
   {"key": "bosh_uaa_web_public_key", "path":"out/${bosh_name}-pub.key"},
   {"key": "bosh_uaa_web_key", "path":"out/${bosh_name}-uaa-web.key"},
   {"key": "bosh_uaa_web_cert", "path":"out/${bosh_name}-uaa-web.crt"}
