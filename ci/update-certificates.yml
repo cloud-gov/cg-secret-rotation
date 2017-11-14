@@ -10,7 +10,7 @@ inputs:
 - name: terraform-outputs
 - name: secret-rotation-config
 - name: bosh-config
-- name: secrets-in-common
+- name: secrets-in-master
 - name: secrets-in
 
 outputs:

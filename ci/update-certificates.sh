@@ -9,15 +9,19 @@ export PATH=$PATH:/goroot/bin
 export PATH=$PATH:/go/bin
 go get github.com/square/certstrap
 
-# Get CA certificate from common
-ca_cert=$(spruce json secrets-in-common/secrets.yml \
-  | jq -r '.ca_cert' \
+# Get CA certificate from master
+ca_cert=$(spruce json secrets-in-master/secrets.yml \
+  | jq -r '.secrets.ca_cert' \
   | sed -e '1,/-----END CERTIFICATE-----/d')
 
-# Get CA private key from common
-ca_key=$(spruce json secrets-in-common/secrets.yml \
-  | jq -r '.ca_key' \
+# Get CA private key from master
+ca_key=$(spruce json secrets-in-master/secrets.yml \
+  | jq -r '.secrets.ca_key' \
   | sed -e '1,/-----END RSA PRIVATE KEY-----/d')
+
+# Get CA public key name from master
+ca_public_key_name=$(spruce json secrets-in-master/secrets.yml \
+  | jq -r '.secrets.ca_public_key_name')
 
 # set up to sign certs
 mkdir out
@@ -58,7 +62,7 @@ for row in $(echo $mapping | jq -c '.[]'); do
 
   # store artifact at $path in $key yml
   spruce json secrets-updated/secrets.yml \
-    | jq --arg artifact "$(cat ${path})" ".${key} = \$artifact" \
+    | jq --arg artifact "$(cat ${path})" ".secrets.${key} = \$artifact" \
     | spruce merge \
     > secrets-updated/tmp.yml
   mv secrets-updated/tmp.yml secrets-updated/secrets.yml
@@ -73,10 +77,12 @@ mapping=$(cat << EOF
   {"key": "bosh_director_password"},
   {"key": "bosh_agent_password"},
   {"key": "bosh_registry_password"},
+  {"key": "bosh_hm_password"},
   {"key": "bosh_uaa_hm_client_secret"},
   {"key": "bosh_uaa_admin_client_secret"},
   {"key": "bosh_uaa_login_client_secret"},
   {"key": "bosh_uaa_ci_client_secret"},
+  {"key": "bosh_uaa_concourse_bosh_client_secret"},
   {"key": "bosh_uaa_bosh_exporter_client_secret"}
 ]
 EOF
@@ -89,12 +95,26 @@ for row in $(echo $mapping | jq -c '.[]'); do
 
   # store password in $key yml
   spruce json secrets-updated/secrets.yml \
-  | jq --arg password "$(cat /dev/urandom | LC_ALL=C tr -dc "a-zA-Z0-9" | head -c 32)" ".${key} = \$password" \
+  | jq --arg password "$(cat /dev/urandom | LC_ALL=C tr -dc "a-zA-Z0-9" | head -c 32)" ".secrets.${key} = \$password" \
     | spruce merge \
     > secrets-updated/tmp.yml
   mv secrets-updated/tmp.yml secrets-updated/secrets.yml
 
 done
+
+# store the CA cert in env secrets file
+spruce json secrets-updated/secrets.yml \
+  | jq --arg ca "$(spruce json secrets-in-master/secrets.yml | jq -r '.secrets.ca_cert')" ".secrets.ca_cert = \$ca" \
+  | spruce merge \
+  > secrets-updated/tmp.yml
+mv secrets-updated/tmp.yml secrets-updated/secrets.yml
+
+# store the CA public key name in env secrets file
+spruce json secrets-updated/secrets.yml \
+  | jq --arg key "${ca_public_key_name}" ".secrets.ca_public_key_name = \$key" \
+  | spruce merge \
+  > secrets-updated/tmp.yml
+mv secrets-updated/tmp.yml secrets-updated/secrets.yml
 
 # generate new secrets passphrase each time we update secrets
 ## all pipelines consuming these secrets (including this one) will need to be updated before running again.
@@ -103,7 +123,7 @@ done
 
 # store environment secrets passphrase in the secrets
 spruce json secrets-updated/secrets.yml \
-  | jq --arg password "${PASSPHRASE}" ".secrets_secrets_passphrase = \$password" \
+  | jq --arg password "${PASSPHRASE}" ".secrets.secrets_secrets_passphrase = \$password" \
   | spruce merge \
   > secrets-updated/tmp.yml
 mv secrets-updated/tmp.yml secrets-updated/secrets.yml
