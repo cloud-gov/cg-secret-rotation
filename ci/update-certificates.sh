@@ -1,5 +1,5 @@
 #!/bin/bash
-set -eux
+set -eu
 
 # install certstrap
 export GOROOT=/goroot
@@ -11,12 +11,12 @@ go get github.com/square/certstrap
 
 # Get CA certificate from common
 ca_cert=$(spruce json secrets-in-common/secrets.yml \
-  | jq -r '.secrets.ca_cert' \
+  | jq -r '.ca_cert' \
   | sed -e '1,/-----END CERTIFICATE-----/d')
 
 # Get CA private key from common
 ca_key=$(spruce json secrets-in-common/secrets.yml \
-  | jq -r '.secrets.ca_key' \
+  | jq -r '.ca_key' \
   | sed -e '1,/-----END RSA PRIVATE KEY-----/d')
 
 # set up to sign certs
@@ -56,9 +56,9 @@ for row in $(echo $mapping | jq -c '.[]'); do
   key=$(echo $row | jq -r '.key')
   path=$(echo $row | jq -r '.path')
 
-  # store artifact at $path in secrets.$key yml
+  # store artifact at $path in $key yml
   spruce json secrets-updated/secrets.yml \
-    | jq --arg artifact "$(cat ${path})" ".secrets.${key} = \$artifact" \
+    | jq --arg artifact "$(cat ${path})" ".${key} = \$artifact" \
     | spruce merge \
     > secrets-updated/tmp.yml
   mv secrets-updated/tmp.yml secrets-updated/secrets.yml
@@ -87,14 +87,26 @@ for row in $(echo $mapping | jq -c '.[]'); do
 
   key=$(echo $row | jq -r '.key')
 
-  # store password in secrets.$key yml
+  # store password in $key yml
   spruce json secrets-updated/secrets.yml \
-  | jq --arg password "$(cat /dev/urandom | LC_ALL=C tr -dc "a-zA-Z0-9" | head -c 32)" ".secrets.${key} = \$password" \
+  | jq --arg password "$(cat /dev/urandom | LC_ALL=C tr -dc "a-zA-Z0-9" | head -c 32)" ".${key} = \$password" \
     | spruce merge \
     > secrets-updated/tmp.yml
   mv secrets-updated/tmp.yml secrets-updated/secrets.yml
 
 done
+
+# generate new secrets passphrase each time we update secrets
+## all pipelines consuming these secrets (including this one) will need to be updated before running again.
+## use PASSPHRASE from env/pipeline configs for now.
+#PASSPHRASE=$(cat /dev/urandom | LC_ALL=C tr -dc "a-zA-Z0-9" | head -c 32)
+
+# store environment secrets passphrase in the secrets
+spruce json secrets-updated/secrets.yml \
+  | jq --arg password "${PASSPHRASE}" ".secrets_secrets_passphrase = \$password" \
+  | spruce merge \
+  > secrets-updated/tmp.yml
+mv secrets-updated/tmp.yml secrets-updated/secrets.yml
 
 # Encrypt updated secrets
 INPUT_FILE=secrets-updated/secrets.yml \

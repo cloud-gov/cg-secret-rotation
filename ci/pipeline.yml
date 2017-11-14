@@ -75,7 +75,9 @@ jobs:
     - get: terraform-outputs
       resource: terraform-outputs-development
     - get: secret-rotation-config
+      resource: secret-rotation-config-development
     - get: bosh-config
+      resource: bosh-config-development
     - get: secrets-in-common
     - get: secrets-in
       resource: secrets-in-development
@@ -160,11 +162,23 @@ resources:
     uri: https://github.com/18F/cg-secret-rotation
     branch: {{secret-rotation-git-branch}}
 
+- name: secret-rotation-config-development
+  type: git
+  source:
+    uri: https://github.com/18F/cg-secret-rotation
+    branch: {{secret-rotation-git-branch-development}}
+
 - name: bosh-config
   type: git
   source:
     uri: https://github.com/18F/cg-deploy-bosh
-    branch: master
+    branch: {{bosh-git-branch}}
+
+- name: bosh-config
+  type: git
+  source:
+    uri: https://github.com/18F/cg-deploy-bosh
+    branch: {{bosh-git-branch-development}}
 
 - name: pipeline-tasks
   type: git
