@@ -10,11 +10,11 @@ inputs:
 - name: terraform-outputs
 - name: secret-rotation-config
 - name: bosh-config
-- name: secrets-in-master
+- name: secrets-in-common
 - name: secrets-in
 
 outputs:
 - name: secrets-updated
 
 run:
-  path: secret-rotation-config/ci/update-certificates.sh
+  path: secret-rotation-config/ci/bosh-update-certificates.sh

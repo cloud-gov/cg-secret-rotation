@@ -9,19 +9,15 @@ export PATH=$PATH:/goroot/bin
 export PATH=$PATH:/go/bin
 go get github.com/square/certstrap
 
-# Get CA certificate from master
-ca_cert=$(spruce json secrets-in-master/secrets.yml \
+# Get CA certificate from common
+ca_cert=$(spruce json secrets-in-common/secrets.yml \
   | jq -r '.secrets.ca_cert' \
   | sed -e '1,/-----END CERTIFICATE-----/d')
 
-# Get CA private key from master
-ca_key=$(spruce json secrets-in-master/secrets.yml \
+# Get CA private key from common
+ca_key=$(spruce json secrets-in-common/secrets.yml \
   | jq -r '.secrets.ca_key' \
   | sed -e '1,/-----END RSA PRIVATE KEY-----/d')
-
-# Get CA public key name from master
-ca_public_key_name=$(spruce json secrets-in-master/secrets.yml \
-  | jq -r '.secrets.ca_public_key_name')
 
 # set up to sign certs
 mkdir out
@@ -31,9 +27,16 @@ echo "${ca_key}" > out/master-bosh.key
 # make a copy of the secrets file
 cp secrets-in/secrets.yml secrets-updated/secrets.yml
 
+# get cn and IP for SANs from terraform
+if [ -z ${IS_MASTER_BOSH+x} ] ; then
+  bosh_name=$(spruce json "terraform-outputs/state.yml" | jq -r '.terraform_outputs.bosh_profile')
+  bosh_addr=$(spruce json "terraform-outputs/state.yml" | jq -r '.terraform_outputs.bosh_static_ip')
+else
+  bosh_name=$(spruce json "terraform-outputs/state.yml" | jq -r '.terraform_outputs.master_bosh_profile')
+  bosh_addr=$(spruce json "terraform-outputs/state.yml" | jq -r '.terraform_outputs.master_static_ip')
+fi
+
 # Generate bosh certs
-bosh_name=$(spruce json "terraform-outputs/state.yml" | jq -r '.terraform_outputs.bosh_profile')
-bosh_addr=$(spruce json "terraform-outputs/state.yml" | jq -r '.terraform_outputs.bosh_static_ip')
 bosh-config/generate-bosh-certs.sh "${bosh_name}" "${bosh_addr}"
 
 # map artifacts to yaml keys
@@ -82,7 +85,6 @@ mapping=$(cat << EOF
   {"key": "bosh_uaa_admin_client_secret"},
   {"key": "bosh_uaa_login_client_secret"},
   {"key": "bosh_uaa_ci_client_secret"},
-  {"key": "bosh_uaa_concourse_bosh_client_secret"},
   {"key": "bosh_uaa_bosh_exporter_client_secret"}
 ]
 EOF
@@ -101,20 +103,6 @@ for row in $(echo $mapping | jq -c '.[]'); do
   mv secrets-updated/tmp.yml secrets-updated/secrets.yml
 
 done
-
-# store the CA cert in env secrets file
-spruce json secrets-updated/secrets.yml \
-  | jq --arg ca "$(spruce json secrets-in-master/secrets.yml | jq -r '.secrets.ca_cert')" ".secrets.ca_cert = \$ca" \
-  | spruce merge \
-  > secrets-updated/tmp.yml
-mv secrets-updated/tmp.yml secrets-updated/secrets.yml
-
-# store the CA public key name in env secrets file
-spruce json secrets-updated/secrets.yml \
-  | jq --arg key "${ca_public_key_name}" ".secrets.ca_public_key_name = \$key" \
-  | spruce merge \
-  > secrets-updated/tmp.yml
-mv secrets-updated/tmp.yml secrets-updated/secrets.yml
 
 # generate new secrets passphrase each time we update secrets
 ## all pipelines consuming these secrets (including this one) will need to be updated before running again.

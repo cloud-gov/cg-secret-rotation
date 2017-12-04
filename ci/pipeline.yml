@@ -3,15 +3,19 @@ groups:
   - name: all
     jobs:
     - new-ca
+    - update-certificates-bosh-master
     - update-certificates-bosh-tooling
     - update-certificates-bosh-development
     - update-certificates-bosh-staging
     - update-certificates-bosh-production
     - remove-ca
-  - name: master
+  - name: common
     jobs:
     - new-ca
     - remove-ca
+  - name: master
+    jobs:
+    - update-certificates-bosh-master
   - name: tooling
     jobs:
     - update-certificates-bosh-tooling
@@ -34,13 +38,36 @@ jobs:
     - get: secret-rotation-config
     - get: bosh-config
     - get: secrets-in
-      resource: secrets-in-master
+      resource: secrets-in-common
   - task: new-ca
     file: secret-rotation-config/ci/new-ca.yml
     tags: [iaas]
     params:
       AWS_DEFAULT_REGION: {{aws-region}}
+      PASSPHRASE: {{common-secrets-passphrase}}
+  - put: secrets-out-common
+    tags: [iaas]
+    params:
+      file: secrets-updated/secrets-encrypted.yml
+
+- name: update-certificates-bosh-master
+  plan:
+  - aggregate:
+    - get: pipeline-tasks
+    - get: terraform-outputs
+      resource: terraform-outputs-tooling
+    - get: secret-rotation-config
+    - get: bosh-config
+    - get: secrets-in-common
+    - get: secrets-in
+      resource: secrets-in-master
+  - task: update-certificates
+    file: secret-rotation-config/ci/bosh-update-certificates.yml
+    tags: [iaas]
+    params:
+      AWS_DEFAULT_REGION: {{aws-region}}
       PASSPHRASE: {{master-secrets-passphrase}}
+      IS_MASTER_BOSH: true
   - put: secrets-out-master
     tags: [iaas]
     params:
@@ -54,11 +81,11 @@ jobs:
       resource: terraform-outputs-tooling
     - get: secret-rotation-config
     - get: bosh-config
-    - get: secrets-in-master
+    - get: secrets-in-common
     - get: secrets-in
       resource: secrets-in-tooling
   - task: update-certificates
-    file: secret-rotation-config/ci/update-certificates.yml
+    file: secret-rotation-config/ci/bosh-update-certificates.yml
     tags: [iaas]
     params:
       AWS_DEFAULT_REGION: {{aws-region}}
@@ -78,11 +105,11 @@ jobs:
       resource: secret-rotation-config-development
     - get: bosh-config
       resource: bosh-config-development
-    - get: secrets-in-master
+    - get: secrets-in-common
     - get: secrets-in
       resource: secrets-in-development
   - task: update-certificates
-    file: secret-rotation-config/ci/update-certificates.yml
+    file: secret-rotation-config/ci/bosh-update-certificates.yml
     tags: [iaas]
     params:
       AWS_DEFAULT_REGION: {{aws-region}}
@@ -100,11 +127,11 @@ jobs:
       resource: terraform-outputs-staging
     - get: secret-rotation-config
     - get: bosh-config
-    - get: secrets-in-master
+    - get: secrets-in-common
     - get: secrets-in
       resource: secrets-in-staging
   - task: update-certificates
-    file: secret-rotation-config/ci/update-certificates.yml
+    file: secret-rotation-config/ci/bosh-update-certificates.yml
     tags: [iaas]
     params:
       AWS_DEFAULT_REGION: {{aws-region}}
@@ -122,11 +149,11 @@ jobs:
       resource: terraform-outputs-production
     - get: secret-rotation-config
     - get: bosh-config
-    - get: secrets-in-master
+    - get: secrets-in-common
     - get: secrets-in
       resource: secrets-in-production
   - task: update-certificates
-    file: secret-rotation-config/ci/update-certificates.yml
+    file: secret-rotation-config/ci/bosh-update-certificates.yml
     tags: [iaas]
     params:
       AWS_DEFAULT_REGION: {{aws-region}}
@@ -143,14 +170,14 @@ jobs:
     - get: secret-rotation-config
     - get: bosh-config
     - get: secrets-in
-      resource: secrets-in-master
+      resource: secrets-in-common
   - task: remove-ca
     file: secret-rotation-config/ci/remove-ca.yml
     tags: [iaas]
     params:
       AWS_DEFAULT_REGION: {{aws-region}}
-      PASSPHRASE: {{master-secrets-passphrase}}
-  - put: secrets-out-master
+      PASSPHRASE: {{common-secrets-passphrase}}
+  - put: secrets-out-common
     tags: [iaas]
     params:
       file: secrets-updated/secrets-encrypted.yml
@@ -214,6 +241,14 @@ resources:
     versioned_file: {{tf-state-file-production}}
     region_name: {{aws-region}}
 
+- name: secrets-in-common
+  type: cg-common
+  source:
+    bucket_name: {{common-bucket-name}}
+    region: {{aws-region}}
+    secrets_file: {{common-secrets-file}}
+    secrets_passphrase: {{common-secrets-passphrase}}
+
 - name: secrets-in-master
   type: cg-common
   source:
@@ -253,6 +288,14 @@ resources:
     region: {{aws-region}}
     secrets_file: {{production-secrets-file}}
     secrets_passphrase: {{production-secrets-passphrase}}
+
+- name: secrets-out-common
+  type: s3-iam
+  source:
+    bucket: {{common-bucket-name}}
+    region_name: {{aws-region}}
+    versioned_file: {{common-secrets-file}}
+    server_side_encryption: AES256
 
 - name: secrets-out-master
   type: s3-iam
