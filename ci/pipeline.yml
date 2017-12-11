@@ -3,15 +3,19 @@ groups:
   - name: all
     jobs:
     - new-ca
+    - update-certificates-bosh-master
     - update-certificates-bosh-tooling
     - update-certificates-bosh-development
     - update-certificates-bosh-staging
     - update-certificates-bosh-production
     - remove-ca
-  - name: master
+  - name: common
     jobs:
     - new-ca
     - remove-ca
+  - name: master
+    jobs:
+    - update-certificates-bosh-master
   - name: tooling
     jobs:
     - update-certificates-bosh-tooling
@@ -46,6 +50,29 @@ jobs:
     params:
       file: secrets-updated/secrets-encrypted.yml
 
+- name: update-certificates-bosh-master
+  plan:
+  - aggregate:
+    - get: pipeline-tasks
+    - get: terraform-outputs
+      resource: terraform-outputs-tooling
+    - get: secret-rotation-config
+    - get: bosh-config
+    - get: secrets-in-common
+    - get: secrets-in
+      resource: secrets-in-master
+  - task: update-certificates
+    file: secret-rotation-config/ci/bosh-update-certificates.yml
+    tags: [iaas]
+    params:
+      AWS_DEFAULT_REGION: {{aws-region}}
+      PASSPHRASE: {{master-secrets-passphrase}}
+      IS_MASTER_BOSH: true
+  - put: secrets-out-master
+    tags: [iaas]
+    params:
+      file: secrets-updated/secrets-encrypted.yml
+
 - name: update-certificates-bosh-tooling
   plan:
   - aggregate:
@@ -58,7 +85,7 @@ jobs:
     - get: secrets-in
       resource: secrets-in-tooling
   - task: update-certificates
-    file: secret-rotation-config/ci/update-certificates.yml
+    file: secret-rotation-config/ci/bosh-update-certificates.yml
     tags: [iaas]
     params:
       AWS_DEFAULT_REGION: {{aws-region}}
@@ -75,12 +102,14 @@ jobs:
     - get: terraform-outputs
       resource: terraform-outputs-development
     - get: secret-rotation-config
+      resource: secret-rotation-config-development
     - get: bosh-config
+      resource: bosh-config-development
     - get: secrets-in-common
     - get: secrets-in
       resource: secrets-in-development
   - task: update-certificates
-    file: secret-rotation-config/ci/update-certificates.yml
+    file: secret-rotation-config/ci/bosh-update-certificates.yml
     tags: [iaas]
     params:
       AWS_DEFAULT_REGION: {{aws-region}}
@@ -102,7 +131,7 @@ jobs:
     - get: secrets-in
       resource: secrets-in-staging
   - task: update-certificates
-    file: secret-rotation-config/ci/update-certificates.yml
+    file: secret-rotation-config/ci/bosh-update-certificates.yml
     tags: [iaas]
     params:
       AWS_DEFAULT_REGION: {{aws-region}}
@@ -124,7 +153,7 @@ jobs:
     - get: secrets-in
       resource: secrets-in-production
   - task: update-certificates
-    file: secret-rotation-config/ci/update-certificates.yml
+    file: secret-rotation-config/ci/bosh-update-certificates.yml
     tags: [iaas]
     params:
       AWS_DEFAULT_REGION: {{aws-region}}
@@ -160,11 +189,23 @@ resources:
     uri: https://github.com/18F/cg-secret-rotation
     branch: {{secret-rotation-git-branch}}
 
+- name: secret-rotation-config-development
+  type: git
+  source:
+    uri: https://github.com/18F/cg-secret-rotation
+    branch: {{secret-rotation-git-branch-development}}
+
 - name: bosh-config
   type: git
   source:
     uri: https://github.com/18F/cg-deploy-bosh
-    branch: master
+    branch: {{bosh-git-branch}}
+
+- name: bosh-config-development
+  type: git
+  source:
+    uri: https://github.com/18F/cg-deploy-bosh
+    branch: {{bosh-git-branch-development}}
 
 - name: pipeline-tasks
   type: git
@@ -208,6 +249,14 @@ resources:
     secrets_file: {{common-secrets-file}}
     secrets_passphrase: {{common-secrets-passphrase}}
 
+- name: secrets-in-master
+  type: cg-common
+  source:
+    bucket_name: {{master-bucket-name}}
+    region: {{aws-region}}
+    secrets_file: {{master-secrets-file}}
+    secrets_passphrase: {{master-secrets-passphrase}}
+
 - name: secrets-in-tooling
   type: cg-common
   source:
@@ -246,6 +295,14 @@ resources:
     bucket: {{common-bucket-name}}
     region_name: {{aws-region}}
     versioned_file: {{common-secrets-file}}
+    server_side_encryption: AES256
+
+- name: secrets-out-master
+  type: s3-iam
+  source:
+    bucket: {{master-bucket-name}}
+    region_name: {{aws-region}}
+    versioned_file: {{master-secrets-file}}
     server_side_encryption: AES256
 
 - name: secrets-out-tooling

@@ -1,5 +1,5 @@
 #!/bin/bash
-set -eux
+set -eu
 
 # install certstrap
 export GOROOT=/goroot
@@ -27,9 +27,16 @@ echo "${ca_key}" > out/master-bosh.key
 # make a copy of the secrets file
 cp secrets-in/secrets.yml secrets-updated/secrets.yml
 
+# get cn and IP for SANs from terraform
+if [ -z ${IS_MASTER_BOSH+x} ] ; then
+  bosh_name=$(spruce json "terraform-outputs/state.yml" | jq -r '.terraform_outputs.bosh_profile')
+  bosh_addr=$(spruce json "terraform-outputs/state.yml" | jq -r '.terraform_outputs.bosh_static_ip')
+else
+  bosh_name=$(spruce json "terraform-outputs/state.yml" | jq -r '.terraform_outputs.master_bosh_profile')
+  bosh_addr=$(spruce json "terraform-outputs/state.yml" | jq -r '.terraform_outputs.master_static_ip')
+fi
+
 # Generate bosh certs
-bosh_name=$(spruce json "terraform-outputs/state.yml" | jq -r '.terraform_outputs.bosh_profile')
-bosh_addr=$(spruce json "terraform-outputs/state.yml" | jq -r '.terraform_outputs.bosh_static_ip')
 bosh-config/generate-bosh-certs.sh "${bosh_name}" "${bosh_addr}"
 
 # map artifacts to yaml keys
@@ -56,7 +63,7 @@ for row in $(echo $mapping | jq -c '.[]'); do
   key=$(echo $row | jq -r '.key')
   path=$(echo $row | jq -r '.path')
 
-  # store artifact at $path in secrets.$key yml
+  # store artifact at $path in $key yml
   spruce json secrets-updated/secrets.yml \
     | jq --arg artifact "$(cat ${path})" ".secrets.${key} = \$artifact" \
     | spruce merge \
@@ -73,6 +80,7 @@ mapping=$(cat << EOF
   {"key": "bosh_director_password"},
   {"key": "bosh_agent_password"},
   {"key": "bosh_registry_password"},
+  {"key": "bosh_hm_password"},
   {"key": "bosh_uaa_hm_client_secret"},
   {"key": "bosh_uaa_admin_client_secret"},
   {"key": "bosh_uaa_login_client_secret"},
@@ -87,7 +95,7 @@ for row in $(echo $mapping | jq -c '.[]'); do
 
   key=$(echo $row | jq -r '.key')
 
-  # store password in secrets.$key yml
+  # store password in $key yml
   spruce json secrets-updated/secrets.yml \
   | jq --arg password "$(cat /dev/urandom | LC_ALL=C tr -dc "a-zA-Z0-9" | head -c 32)" ".secrets.${key} = \$password" \
     | spruce merge \
@@ -95,6 +103,18 @@ for row in $(echo $mapping | jq -c '.[]'); do
   mv secrets-updated/tmp.yml secrets-updated/secrets.yml
 
 done
+
+# generate new secrets passphrase each time we update secrets
+## all pipelines consuming these secrets (including this one) will need to be updated before running again.
+## use PASSPHRASE from env/pipeline configs for now.
+#PASSPHRASE=$(cat /dev/urandom | LC_ALL=C tr -dc "a-zA-Z0-9" | head -c 32)
+
+# store environment secrets passphrase in the secrets
+spruce json secrets-updated/secrets.yml \
+  | jq --arg password "${PASSPHRASE}" ".secrets.secrets_secrets_passphrase = \$password" \
+  | spruce merge \
+  > secrets-updated/tmp.yml
+mv secrets-updated/tmp.yml secrets-updated/secrets.yml
 
 # Encrypt updated secrets
 INPUT_FILE=secrets-updated/secrets.yml \
