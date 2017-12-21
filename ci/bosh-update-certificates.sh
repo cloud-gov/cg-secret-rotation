@@ -73,22 +73,25 @@ for row in $(echo $mapping | jq -c '.[]'); do
 done
 
 # list bosh passwords to generate
-mapping=$(cat << EOF
-[
-  {"key": "bosh_nats_password"},
-  {"key": "bosh_admin_password"},
-  {"key": "bosh_director_password"},
-  {"key": "bosh_agent_password"},
-  {"key": "bosh_registry_password"},
-  {"key": "bosh_hm_password"},
-  {"key": "bosh_uaa_hm_client_secret"},
-  {"key": "bosh_uaa_admin_client_secret"},
-  {"key": "bosh_uaa_login_client_secret"},
-  {"key": "bosh_uaa_ci_client_secret"},
-  {"key": "bosh_uaa_bosh_exporter_client_secret"}
-]
-EOF
-)
+# mapping=$(cat << EOF
+# [
+#   {"key": "bosh_nats_password"},
+#   {"key": "bosh_admin_password"},
+#   {"key": "bosh_director_password"},
+#   {"key": "bosh_agent_password"},
+#   {"key": "bosh_registry_password"},
+#   {"key": "bosh_hm_password"},
+#   {"key": "bosh_uaa_hm_client_secret"},
+#   {"key": "bosh_uaa_admin_client_secret"},
+#   {"key": "bosh_uaa_login_client_secret"},
+#   {"key": "bosh_uaa_ci_client_secret"},
+#   {"key": "bosh_uaa_bosh_exporter_client_secret"}
+# ]
+# EOF
+# )
+
+# For now, don't update passwords
+mapping="[]"
 
 # Generate passwords and store in yml
 for row in $(echo $mapping | jq -c '.[]'); do
