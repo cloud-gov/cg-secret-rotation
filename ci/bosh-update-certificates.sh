@@ -34,7 +34,7 @@ if [ -z ${IS_MASTER_BOSH+x} ] ; then
   bosh_uaa_addr=$(spruce json "terraform-outputs/state.yml" | jq -r '.terraform_outputs.bosh_uaa_static_ips | join(",")')
 else
   bosh_name=$(spruce json "terraform-outputs/state.yml" | jq -r '.terraform_outputs.master_bosh_profile')
-  bosh_addr=$(spruce json "terraform-outputs/state.yml" | jq -r '.terraform_outputs.master_static_ip')
+  bosh_addr=$(spruce json "terraform-outputs/state.yml" | jq -r '.terraform_outputs.master_bosh_static_ip')
   bosh_uaa_addr="${bosh_addr}"
 fi
 
