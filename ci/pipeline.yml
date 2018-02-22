@@ -70,6 +70,7 @@ jobs:
     params:
       AWS_DEFAULT_REGION: ((aws-region))
       PASSPHRASE: ((master-secrets-passphrase))
+      GENERATE_PASSPHRASES: ((generate-passphrase))
       IS_MASTER_BOSH: true
   - put: secrets-out-master
     tags: [iaas]
@@ -94,6 +95,7 @@ jobs:
     params:
       AWS_DEFAULT_REGION: ((aws-region))
       PASSPHRASE: ((tooling-secrets-passphrase))
+      GENERATE_PASSPHRASES: ((generate-passphrase))
   - put: secrets-out-tooling
     tags: [iaas]
     params:
@@ -119,6 +121,7 @@ jobs:
     params:
       AWS_DEFAULT_REGION: ((aws-region))
       PASSPHRASE: ((development-secrets-passphrase))
+      GENERATE_PASSPHRASES: ((generate-passphrase))
   - put: secrets-out-development
     tags: [iaas]
     params:
@@ -142,6 +145,7 @@ jobs:
     params:
       AWS_DEFAULT_REGION: ((aws-region))
       PASSPHRASE: ((staging-secrets-passphrase))
+      GENERATE_PASSPHRASES: ((generate-passphrase))
   - put: secrets-out-staging
     tags: [iaas]
     params:
@@ -165,6 +169,7 @@ jobs:
     params:
       AWS_DEFAULT_REGION: ((aws-region))
       PASSPHRASE: ((production-secrets-passphrase))
+      GENERATE_PASSPHRASES: ((generate-passphrase))
   - put: secrets-out-production
     tags: [iaas]
     params:

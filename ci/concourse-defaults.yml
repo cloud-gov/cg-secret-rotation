@@ -12,3 +12,5 @@ tf-state-file-tooling: tooling/state.yml
 tf-state-file-development: development/state.yml
 tf-state-file-staging: staging/state.yml
 tf-state-file-production: production/state.yml
+
+generate-passphrases: "false"
