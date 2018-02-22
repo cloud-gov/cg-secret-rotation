@@ -71,6 +71,9 @@ jobs:
       AWS_DEFAULT_REGION: ((aws-region))
       PASSPHRASE: ((master-secrets-passphrase))
       GENERATE_PASSPHRASES: ((generate-passphrase))
+      GENERATE_POSTGRES_PASSPHRASE: ((generate-postgres-passphrase))
+      GENERATE_MBUS_PASSPHRASE: ((generate-mbus-passphrase))
+      GENERATE_VCAP_PASSPHRASE: ((generate-vcap-passphrase))
       IS_MASTER_BOSH: true
   - put: secrets-out-master
     tags: [iaas]

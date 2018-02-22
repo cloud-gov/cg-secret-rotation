@@ -12,6 +12,7 @@ go get github.com/square/certstrap
 # Generate CA certificate and keys
 addr=$(spruce json terraform-outputs/state.yml | jq -r '.terraform_outputs.master_bosh_static_ip')
 bosh-config/generate-master-bosh-certs.sh "${addr}"
+key_name=$(cat ./key-name)
 
 # Make a copy of existing secrets to update
 cp secrets-in/secrets.yml secrets-updated/secrets.yml
@@ -27,7 +28,7 @@ mv secrets-updated/tmp.yml secrets-updated/secrets.yml
 ## this public key is stored in ec2 and must be rotated on all bosh deployments
 ##
 spruce json secrets-updated/secrets.yml \
-  | jq --arg key "masterbosh-$(date +'%Y%m%d')" '.secrets.ca_public_key_name = $key' \
+  | jq --arg key "${key_name}" '.secrets.ca_public_key_name = $key' \
   | spruce merge \
   > secrets-updated/tmp.yml
 mv secrets-updated/tmp.yml secrets-updated/secrets.yml
