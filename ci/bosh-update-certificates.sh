@@ -11,8 +11,7 @@ go get github.com/square/certstrap
 
 # Get CA certificate from common
 ca_cert=$(spruce json secrets-in-common/secrets.yml \
-  | jq -r '.secrets.ca_cert' \
-  | sed -e '1,/-----END CERTIFICATE-----/d')
+  | jq -r '.secrets.ca_cert')
 
 # Get CA private key from common
 ca_key=$(spruce json secrets-in-common/secrets.yml \

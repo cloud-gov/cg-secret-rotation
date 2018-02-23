@@ -17,9 +17,16 @@ key_name=$(cat ./key-name)
 # Make a copy of existing secrets to update
 cp secrets-in/secrets.yml secrets-updated/secrets.yml
 
-# Append CA certificate to secrets
+# Update CA certificate in secrets
 spruce json secrets-updated/secrets.yml \
-  | jq --arg cert "$(cat out/master-bosh.crt)" '.secrets.ca_cert = (.secrets.ca_cert + "\n" + $cert)' \
+  | jq --arg cert "$(cat out/master-bosh.crt)" '.secrets.ca_cert = $cert' \
+  | spruce merge \
+  > secrets-updated/tmp.yml
+mv secrets-updated/tmp.yml secrets-updated/secrets.yml
+
+# Append CA certificate to cert store
+spruce json secrets-updated/secrets.yml \
+  | jq --arg cert "$(cat out/master-bosh.crt)" '.secrets.ca_cert_store = (.secrets.ca_cert_store + "\n" + $cert)' \
   | spruce merge \
   > secrets-updated/tmp.yml
 mv secrets-updated/tmp.yml secrets-updated/secrets.yml
@@ -33,7 +40,7 @@ spruce json secrets-updated/secrets.yml \
   > secrets-updated/tmp.yml
 mv secrets-updated/tmp.yml secrets-updated/secrets.yml
 
-# Append CA private key to secrets
+# Update CA private key in secrets
 spruce json secrets-updated/secrets.yml \
   | jq --arg key "$(cat out/master-bosh.key)" '.secrets.ca_key = $key' \
   | spruce merge \
