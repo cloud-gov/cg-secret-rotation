@@ -35,7 +35,7 @@ mv secrets-updated/tmp.yml secrets-updated/secrets.yml
 
 # Append CA private key to secrets
 spruce json secrets-updated/secrets.yml \
-  | jq --arg key "$(cat out/master-bosh.key)" '.secrets.ca_key = (.secrets.ca_key + "\n" + $key)' \
+  | jq --arg key "$(cat out/master-bosh.key)" '.secrets.ca_key = $key' \
   | spruce merge \
   > secrets-updated/tmp.yml
 mv secrets-updated/tmp.yml secrets-updated/secrets.yml

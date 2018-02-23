@@ -16,8 +16,7 @@ ca_cert=$(spruce json secrets-in-common/secrets.yml \
 
 # Get CA private key from common
 ca_key=$(spruce json secrets-in-common/secrets.yml \
-  | jq -r '.secrets.ca_key' \
-  | sed -e '1,/-----END RSA PRIVATE KEY-----/d')
+  | jq -r '.secrets.ca_key')
 
 # set up to sign certs
 mkdir out
