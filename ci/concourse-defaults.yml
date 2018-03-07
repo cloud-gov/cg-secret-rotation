@@ -1,5 +1,8 @@
 secret-rotation-git-branch: master
 bosh-git-branch: master
+aws-region: us-gov-west-1
+
+secrets-bucket-name: cloud-gov-varz
 
 common-secrets-file: secrets-common.yml
 master-secrets-file: secrets-master.yml
@@ -7,6 +10,8 @@ tooling-secrets-file: secrets-tooling.yml
 development-secrets-file: secrets-development.yml
 staging-secrets-file: secrets-staging.yml
 production-secrets-file: secrets-production.yml
+
+tf-state-bucket: terraform-state
 
 tf-state-file-tooling: tooling/state.yml
 tf-state-file-development: development/state.yml
