@@ -260,7 +260,7 @@ resources:
 - name: secrets-in-common
   type: cg-common
   source:
-    bucket_name: ((common-bucket-name))
+    bucket_name: ((secrets-bucket-name))
     region: ((aws-region))
     secrets_file: ((common-secrets-file))
     secrets_passphrase: ((common-secrets-passphrase))
@@ -268,7 +268,7 @@ resources:
 - name: secrets-in-master
   type: cg-common
   source:
-    bucket_name: ((master-bucket-name))
+    bucket_name: ((secrets-bucket-name))
     region: ((aws-region))
     secrets_file: ((master-secrets-file))
     secrets_passphrase: ((master-secrets-passphrase))
@@ -276,7 +276,7 @@ resources:
 - name: secrets-in-tooling
   type: cg-common
   source:
-    bucket_name: ((tooling-bucket-name))
+    bucket_name: ((secrets-bucket-name))
     region: ((aws-region))
     secrets_file: ((tooling-secrets-file))
     secrets_passphrase: ((tooling-secrets-passphrase))
@@ -284,7 +284,7 @@ resources:
 - name: secrets-in-development
   type: cg-common
   source:
-    bucket_name: ((development-bucket-name))
+    bucket_name: ((secrets-bucket-name))
     region: ((aws-region))
     secrets_file: ((development-secrets-file))
     secrets_passphrase: ((development-secrets-passphrase))
@@ -292,7 +292,7 @@ resources:
 - name: secrets-in-staging
   type: cg-common
   source:
-    bucket_name: ((staging-bucket-name))
+    bucket_name: ((secrets-bucket-name))
     region: ((aws-region))
     secrets_file: ((staging-secrets-file))
     secrets_passphrase: ((staging-secrets-passphrase))
@@ -300,7 +300,7 @@ resources:
 - name: secrets-in-production
   type: cg-common
   source:
-    bucket_name: ((production-bucket-name))
+    bucket_name: ((secrets-bucket-name))
     region: ((aws-region))
     secrets_file: ((production-secrets-file))
     secrets_passphrase: ((production-secrets-passphrase))
@@ -308,7 +308,7 @@ resources:
 - name: secrets-out-common
   type: s3-iam
   source:
-    bucket: ((common-bucket-name))
+    bucket: ((secrets-bucket-name))
     region_name: ((aws-region))
     versioned_file: ((common-secrets-file))
     server_side_encryption: AES256
@@ -316,7 +316,7 @@ resources:
 - name: secrets-out-master
   type: s3-iam
   source:
-    bucket: ((master-bucket-name))
+    bucket: ((secrets-bucket-name))
     region_name: ((aws-region))
     versioned_file: ((master-secrets-file))
     server_side_encryption: AES256
@@ -324,7 +324,7 @@ resources:
 - name: secrets-out-tooling
   type: s3-iam
   source:
-    bucket: ((tooling-bucket-name))
+    bucket: ((secrets-bucket-name))
     region_name: ((aws-region))
     versioned_file: ((tooling-secrets-file))
     server_side_encryption: AES256
@@ -332,7 +332,7 @@ resources:
 - name: secrets-out-development
   type: s3-iam
   source:
-    bucket: ((development-bucket-name))
+    bucket: ((secrets-bucket-name))
     region_name: ((aws-region))
     versioned_file: ((development-secrets-file))
     server_side_encryption: AES256
@@ -340,7 +340,7 @@ resources:
 - name: secrets-out-staging
   type: s3-iam
   source:
-    bucket: ((staging-bucket-name))
+    bucket: ((secrets-bucket-name))
     region_name: ((aws-region))
     versioned_file: ((staging-secrets-file))
     server_side_encryption: AES256
@@ -348,7 +348,7 @@ resources:
 - name: secrets-out-production
   type: s3-iam
   source:
-    bucket: ((production-bucket-name))
+    bucket: ((secrets-bucket-name))
     region_name: ((aws-region))
     versioned_file: ((production-secrets-file))
     server_side_encryption: AES256
