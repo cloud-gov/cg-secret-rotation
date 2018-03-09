@@ -1,5 +1,9 @@
 secret-rotation-git-branch: master
 bosh-git-branch: master
+
+secret-rotation-git-branch-development: master
+bosh-git-branch-development: master
+
 aws-region: us-gov-west-1
 
 secrets-bucket-name: cloud-gov-varz
@@ -18,4 +22,7 @@ tf-state-file-development: development/state.yml
 tf-state-file-staging: staging/state.yml
 tf-state-file-production: production/state.yml
 
-generate-passphrases: "false"
+generate-passphrase: "false"
+generate-postgres-passphrase: "false"
+generate-mbus-passphrase: "false"
+generate-vcap-passphrase: "false"
